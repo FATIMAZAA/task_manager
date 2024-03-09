@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #task-container {
+            max-width: 600px; /* Increased max-width */
+            width: 100%;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+        }
+
+        #task-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #task-form label {
+            margin-bottom: 5px;
+        }
+
+        #task-form input {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #task-form button {
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 3px;
+            background-color: #4481eb;
+            color: white;
+            border: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #task-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ccc;
+            padding: 10px 0;
+            margin: 10px 0;
+        }
+
+        .task-content {
+            flex: 1; /* Allows task content to expand */
+        }
+
+        .task-item button {
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin-left: 5px; /* Add some space between buttons */
+        }
+
+        .edit-task {
+            background-color: #5bc0de; /* Edit button color */
+            color: white;
+            border: none;
+        }
+
+        .delete-task {
+            background-color: #d9534f; /* Delete button color */
+            color: white;
+            border: none;
+        }
+
+        .complete-task,
+        .pending-task,
+        .ongoing-task {
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 3px;
+            color: white;
+            border: none;
+        }
+
+        .complete-task {
+            background-color: #4CAF50;
+        }
+
+        .pending-task {
+            background-color: #f0ad4e;
+        }
+
+        .ongoing-task {
+            background-color: #5bc0de;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            background-color: #4481eb;
+            padding: 10px;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="task-container">
+    <h2>Task Manager</h2>
+    <form id="task-form">
+        <label for="task">New Task:</label>
+        <input type="text" id="task" placeholder="Enter task" required>
+        <label for="deadline">Deadline:</label>
+        <input type="date" id="deadline" required>
+        <label for="startDate">Start Date:</label>
+        <input type="date" id="startDate" required>
+        <button type="submit">Add New Task</button>
+    </form>
+    <div id="task-summary"></div>
+    <ul id="task-list"></ul>
+</div>
+
+<div class="navbar">
+    <a href="2.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="3.html">Contact</a>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const taskForm = document.getElementById('task-form');
+        const taskList = document.getElementById('task-list');
+        const taskSummary = document.getElementById('task-summary');
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        // Load tasks from localStorage on page load
+        if (tasks.length > 0) {
+            tasks.forEach(task => {
+                addTaskToDOM(task);
+            });
+        }
+
+        taskForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            addTask();
+        });
+
+        taskList.addEventListener('click', function (event) {
+            const target = event.target;
+
+            if (target.classList.contains('delete-task')) {
+                deleteTask(target.closest('.task-item'));
+            } else if (target.classList.contains('edit-task')) {
+                editTask(target.closest('.task-item'));
+            } else if (target.classList.contains('complete-task')) {
+                completeTask(target.closest('.task-item'));
+            } else if (target.classList.contains('pending-task')) {
+                pendingTask(target.closest('.task-item'));
+            } else if (target.classList.contains('ongoing-task')) {
+                ongoingTask(target.closest('.task-item'));
+            }
+        });
+
+        function addTask() {
+            const taskInput = document.getElementById('task');
+            const taskDeadline = document.getElementById('deadline').value;
+            const taskStartDate = document.getElementById('startDate').value;
+            const taskText = taskInput.value.trim();
+
+            if (taskText !== '') {
+                const taskItem = {
+                    text: taskText,
+                    deadline: taskDeadline,
+                    startDate: taskStartDate,
+                    status: 'pending'
+                };
+                tasks.push(taskItem);
+                addTaskToDOM(taskItem);
+                updateLocalStorage();
+                taskInput.value = '';
+                document.getElementById('deadline').value = '';
+                document.getElementById('startDate').value = '';
+                updateTaskSummary();
+            }
+        }
+
+        function deleteTask(taskItem) {
+            const taskIndex = Array.from(taskList.children).indexOf(taskItem);
+            taskList.removeChild(taskItem);
+            tasks.splice(taskIndex, 1);
+            updateLocalStorage();
+            updateTaskSummary();
+        }
+
+        function editTask(taskItem) {
+            const span = taskItem.querySelector('span');
+            const newText = prompt('Edit task:', span.textContent);
+
+            if (newText !== null) {
+                span.textContent = newText;
+                const taskIndex = Array.from(taskList.children).indexOf(taskItem);
+                tasks[taskIndex].text = newText;
+                updateLocalStorage();
+            }
+        }
+
+        function completeTask(taskItem) {
+            taskItem.classList.remove('pending', 'ongoing');
+            taskItem.classList.add('completed');
+            updateTaskStatus(taskItem, 'completed');
+        }
+
+        function pendingTask(taskItem) {
+            taskItem.classList.remove('completed', 'ongoing');
+            taskItem.classList.add('pending');
+            updateTaskStatus(taskItem, 'pending');
+        }
+
+        function ongoingTask(taskItem) {
+            taskItem.classList.remove('completed', 'pending');
+            taskItem.classList.add('ongoing');
+            updateTaskStatus(taskItem, 'ongoing');
+        }
+
+        function addTaskToDOM(taskItem) {
+            const taskListItem = document.createElement('li');
+            taskListItem.className = 'task-item ' + taskItem.status;
+            taskListItem.innerHTML = `
+                <div class="task-content">
+                    <span>${taskItem.text}</span>
+                    <span>Deadline: ${taskItem.deadline}</span>
+                    <span>Start Date: ${taskItem.startDate}</span>
+                </div>
+                <div class="task-buttons">
+                    <button class="edit-task">Edit</button>
+                    <button class="delete-task">Delete</button>
+                    <button class="complete-task">Complete</button>
+                    <button class="pending-task">Pending</button>
+                    <button class="ongoing-task">Ongoing</button>
+                </div>
+            `;
+            taskList.appendChild(taskListItem);
+        }
+
+        function updateLocalStorage() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function updateTaskSummary() {
+            const totalTasks = tasks.length;
+            const completedTasks = tasks.filter(task => task.status === 'completed').length;
+            const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+            const ongoingTasks = tasks.filter(task => task.status === 'ongoing').length;
+
+            taskSummary.innerHTML = `
+                Total Tasks: ${totalTasks} <br>
+                Completed Tasks: ${completedTasks} <br>
+                Pending Tasks: ${pendingTasks} <br>
+                Ongoing Tasks: ${ongoingTasks}
+            `;
+        }
+
+        function updateTaskStatus(taskItem, status) {
+            const taskIndex = Array.from(taskList.children).indexOf(taskItem);
+            tasks[taskIndex].status = status;
+            updateLocalStorage();
+            updateTaskSummary();
+        }
+    });
+</script>
+
+</body>
+</html>
